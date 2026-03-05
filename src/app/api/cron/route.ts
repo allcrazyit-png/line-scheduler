@@ -28,9 +28,6 @@ export async function GET() {
             const dateStr = s.scheduledAt.replace(" ", "T") + ":00+08:00";
             const scheduledDate = new Date(dateStr);
 
-            // 加入 Debug 資訊 (使用本地時間顯示)
-            console.log(`Checking [${s.id}] ${s.group}: Scheduled=${scheduledDate.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}, Now=${now.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}`);
-
             return scheduledDate <= now;
         });
 
@@ -75,13 +72,7 @@ export async function GET() {
         const allPending = schedules.filter((s: any) => s.status === "pending");
 
         return new NextResponse(JSON.stringify({
-            now: now.toISOString(),
-            nowLocal: now.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' }),
-            foundCount: schedules.length,
-            pendingCount: allPending.length,
             processedCount: dueSchedules.length,
-            dueSchedules: dueSchedules.map((s: any) => ({ id: s.id, group: s.group, time: s.scheduledAt })),
-            allPendingSchedules: allPending.map((s: any) => ({ id: s.id, group: s.group, time: s.scheduledAt })),
             results,
         }), {
             status: 200,
