@@ -168,3 +168,68 @@ export async function updateScheduleStatus(id: string, status: string) {
         },
     });
 }
+
+export async function getGroups() {
+    const sheets = await getSheets();
+    const range = "line_groups!A2:B";
+    const response = await sheets.spreadsheets.values.get({
+        spreadsheetId: process.env.GOOGLE_SHEETS_ID,
+        range,
+    });
+
+    const rows = response.data.values || [];
+    return rows.map((row) => ({
+        name: row[0],
+        id: row[1],
+    }));
+}
+
+export async function addGroup(data: { name: string; id: string }) {
+    const sheets = await getSheets();
+    const range = "line_groups!A:B";
+    const values = [[data.name, data.id]];
+
+    await sheets.spreadsheets.values.append({
+        spreadsheetId: process.env.GOOGLE_SHEETS_ID,
+        range,
+        valueInputOption: "RAW",
+        requestBody: { values },
+    });
+}
+
+export async function deleteGroup(name: string) {
+    const sheets = await getSheets();
+    const sheetMetadata = await sheets.spreadsheets.get({
+        spreadsheetId: process.env.GOOGLE_SHEETS_ID,
+    });
+    const sheetId = sheetMetadata.data.sheets?.find(
+        (s) => s.properties?.title === "line_groups"
+    )?.properties?.sheetId;
+
+    if (sheetId === undefined) throw new Error("Sheet 'line_groups' not found");
+
+    const groups = await getGroups();
+    const rowIndex = groups.findIndex((g) => g.name === name);
+
+    if (rowIndex === -1) return;
+
+    const rowPos = rowIndex + 1; // header is index 0
+
+    await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: process.env.GOOGLE_SHEETS_ID,
+        requestBody: {
+            requests: [
+                {
+                    deleteDimension: {
+                        range: {
+                            sheetId: sheetId,
+                            dimension: "ROWS",
+                            startIndex: rowPos,
+                            endIndex: rowPos + 1,
+                        },
+                    },
+                },
+            ],
+        },
+    });
+}

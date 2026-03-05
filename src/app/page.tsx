@@ -30,7 +30,6 @@ const TEMPLATES = [
     { label: "公告通知", text: "📢 重要公告\n\n敬請各位同仁注意以下事項：\n\n內容：\n\n如有疑問請聯絡相關負責人。" },
 ];
 
-const GROUPS = ["行銷團隊", "Sales Department", "全體員工", "管理層", "技術部門"];
 
 export default function DashboardPage() {
     const [selectedGroup, setSelectedGroup] = useState("");
@@ -38,6 +37,7 @@ export default function DashboardPage() {
     const [scheduledDate, setScheduledDate] = useState("");
     const [scheduledTime, setScheduledTime] = useState("");
     const [queue, setQueue] = useState<QueueItem[]>([]);
+    const [groups, setGroups] = useState<{ name: string; id: string }[]>([]);
     const [loading, setLoading] = useState(true);
     const [groupName, setGroupName] = useState("");
     const [groupId, setGroupId] = useState("");
@@ -45,7 +45,18 @@ export default function DashboardPage() {
 
     useEffect(() => {
         fetchQueue();
+        fetchGroups();
     }, []);
+
+    const fetchGroups = async () => {
+        try {
+            const res = await fetch("/api/groups");
+            const data = await res.json();
+            if (Array.isArray(data)) setGroups(data);
+        } catch (err) {
+            console.error("Fetch groups failed:", err);
+        }
+    };
 
     const fetchQueue = async () => {
         try {
@@ -116,10 +127,36 @@ export default function DashboardPage() {
         }
     };
 
-    const handleAddGroup = () => {
+    const handleAddGroup = async () => {
         if (!groupName || !groupId) return;
-        setGroupName("");
-        setGroupId("");
+        try {
+            const res = await fetch("/api/groups", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: groupName, id: groupId }),
+            });
+            if (res.ok) {
+                setGroups((prev) => [...prev, { name: groupName, id: groupId }]);
+                setGroupName("");
+                setGroupId("");
+            }
+        } catch (err) {
+            console.error("Add group failed:", err);
+        }
+    };
+
+    const handleDeleteGroup = async (name: string) => {
+        if (!confirm(`確定要刪除群組「${name}」嗎？`)) return;
+        try {
+            const res = await fetch(`/api/groups/${encodeURIComponent(name)}`, {
+                method: "DELETE",
+            });
+            if (res.ok) {
+                setGroups((prev) => prev.filter((g) => g.name !== name));
+            }
+        } catch (err) {
+            console.error("Delete group failed:", err);
+        }
     };
 
     return (
@@ -182,8 +219,8 @@ export default function DashboardPage() {
                                     className="input-field pl-10 pr-10 appearance-none"
                                 >
                                     <option value="">請選擇目標群組</option>
-                                    {GROUPS.map((g) => (
-                                        <option key={g} value={g}>{g}</option>
+                                    {groups.map((g) => (
+                                        <option key={g.id} value={g.name}>{g.name}</option>
                                     ))}
                                 </select>
                                 <ChevronDown size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -380,19 +417,29 @@ export default function DashboardPage() {
 
                     {/* Existing Groups List */}
                     <div className="mt-4 space-y-2">
-                        {GROUPS.slice(0, 3).map((g) => (
-                            <div key={g} className="flex items-center justify-between py-2.5 px-3 rounded-xl bg-gray-50 dark:bg-gray-800">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="w-7 h-7 bg-[#06C755]/10 rounded-lg flex items-center justify-center">
-                                        <Users size={13} className="text-[#06C755]" />
+                        {groups.length === 0 ? (
+                            <p className="text-center text-xs text-gray-400 py-4">尚未建立任何群組</p>
+                        ) : (
+                            groups.map((g) => (
+                                <div key={g.id} className="flex items-center justify-between py-2.5 px-3 rounded-xl bg-gray-50 dark:bg-gray-800">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-7 h-7 bg-[#06C755]/10 rounded-lg flex items-center justify-center">
+                                            <Users size={13} className="text-[#06C755]" />
+                                        </div>
+                                        <div>
+                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 block">{g.name}</span>
+                                            <span className="text-[10px] text-gray-400 font-mono">{g.id}</span>
+                                        </div>
                                     </div>
-                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{g}</span>
+                                    <button
+                                        onClick={() => handleDeleteGroup(g.name)}
+                                        className="text-xs text-gray-400 hover:text-red-500 transition-colors p-1"
+                                    >
+                                        <Trash2 size={13} />
+                                    </button>
                                 </div>
-                                <button className="text-xs text-gray-400 hover:text-red-500 transition-colors">
-                                    <Trash2 size={13} />
-                                </button>
-                            </div>
-                        ))}
+                            ))
+                        )}
                     </div>
                 </section>
             </div>
