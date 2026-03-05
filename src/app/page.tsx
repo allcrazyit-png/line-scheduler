@@ -260,11 +260,15 @@ export default function DashboardPage() {
                         {/* Submit Button */}
                         <button
                             onClick={handleSchedule}
-                            disabled={!selectedGroup || !message || !scheduledDate || !scheduledTime}
+                            disabled={loading || !selectedGroup || !message || !scheduledDate || !scheduledTime}
                             className="line-btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
                         >
-                            <Clock size={17} />
-                            預約訊息
+                            {loading ? (
+                                <Loader2 size={17} className="animate-spin" />
+                            ) : (
+                                <Clock size={17} />
+                            )}
+                            {loading ? "處理中..." : "預約訊息"}
                         </button>
                     </div>
                 </section>
