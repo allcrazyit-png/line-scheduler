@@ -21,13 +21,12 @@ export async function GET() {
         const dueSchedules = schedules.filter((s) => {
             if (s.status !== "pending") return false;
 
-            // 處理時間格式：2026-03-05 22:15 -> 2026-03-05T22:15:00
-            // 這裡強烈建議補上秒數秒與本地時區偏置或是直接用原生 Date 解析
-            const dateStr = s.scheduledAt.replace(" ", "T");
+            // 修正時區：強制加上台灣時區 +08:00
+            const dateStr = s.scheduledAt.replace(" ", "T") + ":00+08:00";
             const scheduledDate = new Date(dateStr);
 
-            // 加入 Debug 資訊
-            console.log(`Checking [${s.id}] ${s.group}: Scheduled=${scheduledDate.toISOString()}, Now=${now.toISOString()}`);
+            // 加入 Debug 資訊 (使用本地時間顯示)
+            console.log(`Checking [${s.id}] ${s.group}: Scheduled=${scheduledDate.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}, Now=${now.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}`);
 
             return scheduledDate <= now;
         });
