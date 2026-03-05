@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { getSchedules, updateScheduleStatus, addHistory, getGroups } from "@/lib/googleSheets";
 import { sendLineMessage } from "@/lib/line";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET() {
     try {
         const [schedules, groups] = await Promise.all([
@@ -10,7 +13,7 @@ export async function GET() {
         ]);
 
         const groupMap: Record<string, string> = {};
-        groups.forEach(g => {
+        groups.forEach((g: any) => {
             groupMap[g.name] = g.id;
         });
 
@@ -18,7 +21,7 @@ export async function GET() {
         const results = [];
 
         // 找出所有狀態為 pending 且時間已到的預約
-        const dueSchedules = schedules.filter((s) => {
+        const dueSchedules = schedules.filter((s: any) => {
             if (s.status !== "pending") return false;
 
             // 修正時區：強制加上台灣時區 +08:00
@@ -69,12 +72,18 @@ export async function GET() {
             }
         }
 
-        return NextResponse.json({
+        return new NextResponse(JSON.stringify({
             now: now.toISOString(),
             foundCount: schedules.length,
             processedCount: dueSchedules.length,
-            dueSchedules: dueSchedules.map(s => ({ id: s.id, group: s.group, time: s.scheduledAt })),
+            dueSchedules: dueSchedules.map((s: any) => ({ id: s.id, group: s.group, time: s.scheduledAt })),
             results,
+        }), {
+            status: 200,
+            headers: {
+                'Cache-Control': 'no-store, max-age=0, must-revalidate',
+                'Content-Type': 'application/json',
+            },
         });
     } catch (error: any) {
         console.error("Cron API error:", error);
