@@ -22,8 +22,16 @@ export async function POST(req: Request) {
 
         await addGroup({ name, id });
         return NextResponse.json({ success: true, group: { name, id } });
-    } catch (error) {
+    } catch (error: any) {
         console.error("POST /api/groups error:", error);
-        return NextResponse.json({ error: "Failed to add group" }, { status: 500 });
+
+        // 擷取具體的 Google API 錯誤
+        if (error.code === 400) {
+            return NextResponse.json({
+                error: "找不到 'line_groups' 分頁，請確認試算表內已建立該名稱的分頁。"
+            }, { status: 400 });
+        }
+
+        return NextResponse.json({ error: "寫入失敗：" + error.message }, { status: 500 });
     }
 }
