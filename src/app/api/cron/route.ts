@@ -72,11 +72,16 @@ export async function GET() {
             }
         }
 
+        const allPending = schedules.filter((s: any) => s.status === "pending");
+
         return new NextResponse(JSON.stringify({
             now: now.toISOString(),
+            nowLocal: now.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' }),
             foundCount: schedules.length,
+            pendingCount: allPending.length,
             processedCount: dueSchedules.length,
             dueSchedules: dueSchedules.map((s: any) => ({ id: s.id, group: s.group, time: s.scheduledAt })),
+            allPendingSchedules: allPending.map((s: any) => ({ id: s.id, group: s.group, time: s.scheduledAt })),
             results,
         }), {
             status: 200,
