@@ -3,7 +3,18 @@ import { google } from "googleapis";
 const SCOPES = ["https://www.googleapis.com/auth/spreadsheets"];
 
 export async function getSheets() {
-    const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
+    let privateKey = process.env.GOOGLE_PRIVATE_KEY;
+
+    if (privateKey) {
+        // 處理 Vercel 或環境變數中可能出現的各種換行符號問題
+        privateKey = privateKey.replace(/\\n/g, "\n");
+
+        // 有時候 Vercel 會自動幫值加上外層引號，導致 OpenSSL 無法解析，這裡要去掉
+        if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
+            privateKey = privateKey.substring(1, privateKey.length - 1);
+        }
+    }
+
     const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
 
     const auth = new google.auth.GoogleAuth({
