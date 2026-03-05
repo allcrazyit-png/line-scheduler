@@ -30,7 +30,7 @@ export async function getSheets() {
 
 export async function getSchedules() {
     const sheets = await getSheets();
-    const range = "schedules!A2:F";
+    const range = "line_schedules!A2:F";
     const response = await sheets.spreadsheets.values.get({
         spreadsheetId: process.env.GOOGLE_SHEETS_ID,
         range,
@@ -56,7 +56,7 @@ export async function addSchedule(data: {
     createdAt: string;
 }) {
     const sheets = await getSheets();
-    const range = "schedules!A:F";
+    const range = "line_schedules!A:F";
     const values = [
         [data.id, data.group, data.message, data.scheduledAt, data.status, data.createdAt],
     ];
@@ -75,10 +75,10 @@ export async function deleteSchedule(id: string) {
         spreadsheetId: process.env.GOOGLE_SHEETS_ID,
     });
     const sheetId = sheetMetadata.data.sheets?.find(
-        (s) => s.properties?.title === "schedules"
+        (s) => s.properties?.title === "line_schedules"
     )?.properties?.sheetId;
 
-    if (sheetId === undefined) throw new Error("Sheet 'schedules' not found");
+    if (sheetId === undefined) throw new Error("Sheet 'line_schedules' not found");
 
     const schedules = await getSchedules();
     const rowIndex = schedules.findIndex((s) => s.id === id);
@@ -109,7 +109,7 @@ export async function deleteSchedule(id: string) {
 
 export async function getHistory() {
     const sheets = await getSheets();
-    const range = "history!A2:F";
+    const range = "line_history!A2:F";
     const response = await sheets.spreadsheets.values.get({
         spreadsheetId: process.env.GOOGLE_SHEETS_ID,
         range,
@@ -135,7 +135,7 @@ export async function addHistory(data: {
     sentAt: string;
 }) {
     const sheets = await getSheets();
-    const range = "history!A:F";
+    const range = "line_history!A:F";
     const values = [
         [data.id, data.group, data.message, data.status, data.scheduledAt, data.sentAt],
     ];
@@ -157,7 +157,7 @@ export async function updateScheduleStatus(id: string, status: string) {
 
     // rowIndex + 2 because of header (A1)
     const rowPos = rowIndex + 2;
-    const range = `schedules!E${rowPos}`;
+    const range = `line_schedules!E${rowPos}`;
 
     await sheets.spreadsheets.values.update({
         spreadsheetId: process.env.GOOGLE_SHEETS_ID,
