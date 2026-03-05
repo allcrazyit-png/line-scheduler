@@ -128,7 +128,9 @@ export default function DashboardPage() {
     };
 
     const handleAddGroup = async () => {
-        if (!groupName || !groupId) return;
+        if (!groupName) return alert("請輸入群組名稱！");
+        if (!groupId) return alert("請輸入群組 ID！");
+
         try {
             const res = await fetch("/api/groups", {
                 method: "POST",
@@ -139,9 +141,14 @@ export default function DashboardPage() {
                 setGroups((prev) => [...prev, { name: groupName, id: groupId }]);
                 setGroupName("");
                 setGroupId("");
+                alert("群組新增成功！");
+            } else {
+                const errData = await res.json();
+                alert("新增失敗：" + (errData.error || "未知錯誤"));
             }
         } catch (err) {
             console.error("Add group failed:", err);
+            alert("網路連線失敗，請稍後再試。");
         }
     };
 
@@ -404,11 +411,9 @@ export default function DashboardPage() {
                         />
                         <button
                             onClick={handleAddGroup}
-                            disabled={!groupName || !groupId}
                             className="w-full flex items-center justify-center gap-2 text-sm font-semibold py-3 rounded-xl
                 border-2 border-dashed border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400
-                hover:border-[#06C755] hover:text-[#06C755] disabled:opacity-40 disabled:cursor-not-allowed
-                transition-all duration-200"
+                hover:border-[#06C755] hover:text-[#06C755] active:scale-95 transition-all duration-200"
                         >
                             <Plus size={16} />
                             新增群組
