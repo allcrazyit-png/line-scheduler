@@ -1,20 +1,19 @@
 import { NextResponse } from "next/server";
-import { getSchedules, updateScheduleStatus, addHistory } from "@/lib/googleSheets";
+import { getSchedules, updateScheduleStatus, addHistory, getGroups } from "@/lib/googleSheets";
 import { sendLineMessage } from "@/lib/line";
-
-// 假設群組名稱對應到實際的 LINE Group ID/User ID
-// 在實際應用中，管理群組功能應儲存此對應關係
-const GROUP_ID_MAP: Record<string, string> = {
-    "行銷團隊": "C00000000000000000000000000000001", // 範例 ID
-    "Sales Department": "C00000000000000000000000000000002",
-    "全體員工": "C00000000000000000000000000000003",
-    "管理層": "C00000000000000000000000000000004",
-    "技術部門": "C00000000000000000000000000000005",
-};
 
 export async function GET() {
     try {
-        const schedules = await getSchedules();
+        const [schedules, groups] = await Promise.all([
+            getSchedules(),
+            getGroups()
+        ]);
+
+        const groupMap: Record<string, string> = {};
+        groups.forEach(g => {
+            groupMap[g.name] = g.id;
+        });
+
         const now = new Date();
         const results = [];
 
@@ -27,7 +26,7 @@ export async function GET() {
 
         for (const schedule of dueSchedules) {
             try {
-                const lineId = GROUP_ID_MAP[schedule.group] || schedule.group; // 如果找不到對應則直接用 ID
+                const lineId = groupMap[schedule.group] || schedule.group; // 如果找不到對應則直接用 ID
 
                 // 1. 發送 LINE
                 await sendLineMessage(lineId, schedule.message);
