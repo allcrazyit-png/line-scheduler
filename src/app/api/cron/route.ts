@@ -20,7 +20,15 @@ export async function GET() {
         // 找出所有狀態為 pending 且時間已到的預約
         const dueSchedules = schedules.filter((s) => {
             if (s.status !== "pending") return false;
-            const scheduledDate = new Date(s.scheduledAt.replace(" ", "T")); // 轉換格式以利解析
+
+            // 處理時間格式：2026-03-05 22:15 -> 2026-03-05T22:15:00
+            // 這裡強烈建議補上秒數秒與本地時區偏置或是直接用原生 Date 解析
+            const dateStr = s.scheduledAt.replace(" ", "T");
+            const scheduledDate = new Date(dateStr);
+
+            // 加入 Debug 資訊
+            console.log(`Checking [${s.id}] ${s.group}: Scheduled=${scheduledDate.toISOString()}, Now=${now.toISOString()}`);
+
             return scheduledDate <= now;
         });
 
@@ -63,7 +71,10 @@ export async function GET() {
         }
 
         return NextResponse.json({
+            now: now.toISOString(),
+            foundCount: schedules.length,
             processedCount: dueSchedules.length,
+            dueSchedules: dueSchedules.map(s => ({ id: s.id, group: s.group, time: s.scheduledAt })),
             results,
         });
     } catch (error: any) {
