@@ -67,7 +67,10 @@ export default function DashboardPage() {
     };
 
     const handleSchedule = async () => {
-        if (!selectedGroup || !message || !scheduledDate || !scheduledTime) return;
+        if (!selectedGroup) return alert("請選擇目標群組！");
+        if (!message) return alert("請輸入訊息內容！");
+        if (!scheduledDate) return alert("請選擇發送日期！");
+        if (!scheduledTime) return alert("請選擇發送時間！");
 
         setLoading(true);
         try {
@@ -260,8 +263,8 @@ export default function DashboardPage() {
                         {/* Submit Button */}
                         <button
                             onClick={handleSchedule}
-                            disabled={loading || !selectedGroup || !message || !scheduledDate || !scheduledTime}
-                            className="line-btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
+                            className="line-btn-primary w-full flex items-center justify-center gap-2 active:scale-95 transition-transform disabled:opacity-40"
+                            disabled={loading}
                         >
                             {loading ? (
                                 <Loader2 size={17} className="animate-spin" />
