@@ -22,13 +22,28 @@ export async function GET() {
 
         // 找出所有狀態為 pending 且時間已到的預約
         const dueSchedules = schedules.filter((s: any) => {
-            if (s.status !== "pending") return false;
+            if (!s.status || !s.scheduledAt) return false;
 
-            // 修正時區：強制加上台灣時區 +08:00
-            const dateStr = s.scheduledAt.replace(" ", "T") + ":00+08:00";
-            const scheduledDate = new Date(dateStr);
+            const normalizedStatus = s.status.trim().toLowerCase();
+            if (normalizedStatus !== "pending") return false;
 
-            return scheduledDate <= now;
+            // 處理時間格式，加入容錯
+            try {
+                const dateStr = s.scheduledAt.replace(" ", "T").replace(/\//g, "-");
+                // 如果沒有秒數則補上
+                const finalDateStr = dateStr.includes("+") || dateStr.includes("Z")
+                    ? dateStr
+                    : (dateStr.split(":").length === 2 ? dateStr + ":00" : dateStr) + "+08:00";
+
+                const scheduledDate = new Date(finalDateStr);
+
+                // 檢查是否為有效日期
+                if (isNaN(scheduledDate.getTime())) return false;
+
+                return scheduledDate <= now;
+            } catch (e) {
+                return false;
+            }
         });
 
         for (const schedule of dueSchedules) {
@@ -72,7 +87,16 @@ export async function GET() {
         const allPending = schedules.filter((s: any) => s.status === "pending");
 
         return new NextResponse(JSON.stringify({
+            serverTime: now.toISOString(),
+            serverTimeLocal: now.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' }),
+            totalFound: schedules.length,
             processedCount: dueSchedules.length,
+            debugSchedules: schedules.slice(0, 10).map((s: any) => ({
+                id: s.id,
+                time: s.scheduledAt,
+                status: s.status,
+                isDue: dueSchedules.some(d => d.id === s.id)
+            })),
             results,
         }), {
             status: 200,
