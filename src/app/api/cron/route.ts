@@ -91,6 +91,9 @@ export async function GET() {
                 };
                 console.error(`Failed to send schedule ${schedule.id}:`, errDetail);
 
+                // 關鍵修復：發送失敗也要更新狀態，防止下次再次重試造成 429 率限
+                await updateScheduleStatus(schedule.id, "failed");
+
                 await addHistory({
                     id: schedule.id,
                     group: schedule.group,
@@ -102,6 +105,7 @@ export async function GET() {
 
                 results.push({ id: schedule.id, status: "failed", error: errDetail });
             }
+
         }
 
         return new NextResponse(JSON.stringify({
