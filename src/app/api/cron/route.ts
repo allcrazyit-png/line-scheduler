@@ -22,22 +22,36 @@ export async function GET() {
 
         // 找出所有狀態為 pending 且時間已到的預約
         const dueSchedules = schedules.filter((s: any) => {
-            if (!s.status || !s.scheduledAt) return false;
+            // 由於使用者表頭變更且資料可能錄錯位置（例如 D 欄放 success, E 欄放時間）
+            // 我們這裡採取「智慧偵測」：哪一格長得像時間，就用哪一格
+            const isDate = (str: string) => str && (str.includes("-") || str.includes("/"));
 
-            const normalizedStatus = s.status.trim().toLowerCase();
+            let dateStrCandidate = "";
+            let statusCandidate = "";
+
+            if (isDate(s.scheduledAt)) {
+                dateStrCandidate = s.scheduledAt;
+                statusCandidate = s.status;
+            } else if (isDate(s.status)) {
+                dateStrCandidate = s.status;
+                statusCandidate = s.scheduledAt;
+            } else {
+                return false;
+            }
+
+            if (!statusCandidate || !dateStrCandidate) return false;
+
+            const normalizedStatus = statusCandidate.trim().toLowerCase();
             if (normalizedStatus !== "pending") return false;
 
             // 處理時間格式，加入容錯
             try {
-                const dateStr = s.scheduledAt.replace(" ", "T").replace(/\//g, "-");
-                // 如果沒有秒數則補上
-                const finalDateStr = dateStr.includes("+") || dateStr.includes("Z")
-                    ? dateStr
-                    : (dateStr.split(":").length === 2 ? dateStr + ":00" : dateStr) + "+08:00";
+                const datePart = dateStrCandidate.replace(" ", "T").replace(/\//g, "-");
+                const finalDateStr = datePart.includes("+") || datePart.includes("Z")
+                    ? datePart
+                    : (datePart.split(":").length === 2 ? datePart + ":00" : datePart) + "+08:00";
 
                 const scheduledDate = new Date(finalDateStr);
-
-                // 檢查是否為有效日期
                 if (isNaN(scheduledDate.getTime())) return false;
 
                 return scheduledDate <= now;
