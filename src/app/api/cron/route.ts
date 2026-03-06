@@ -22,8 +22,7 @@ export async function GET() {
 
         // 找出所有狀態為 pending 且時間已到的預約
         const dueSchedules = schedules.filter((s: any) => {
-            // 由於使用者表頭變更且資料可能錄錯位置（例如 D 欄放 success, E 欄放時間）
-            // 我們這裡採取「智慧偵測」：哪一格長得像時間，就用哪一格
+            // 智慧偵測：哪一格長得像時間，就用哪一格
             const isDate = (str: string) => str && (str.includes("-") || str.includes("/"));
 
             let dateStrCandidate = "";
@@ -62,7 +61,10 @@ export async function GET() {
 
         for (const schedule of dueSchedules) {
             try {
-                const lineId = groupMap[schedule.group] || schedule.group; // 如果找不到對應則直接用 ID
+                const lineId = groupMap[schedule.group] || schedule.group;
+
+                // 記錄發送嘗試
+                console.log(`Sending to lineId: [${lineId}], group: [${schedule.group}]`);
 
                 // 1. 發送 LINE
                 await sendLineMessage(lineId, schedule.message);
@@ -80,11 +82,15 @@ export async function GET() {
                     sentAt: new Date().toISOString(),
                 });
 
-                results.push({ id: schedule.id, status: "success" });
+                results.push({ id: schedule.id, status: "success", lineId });
             } catch (err: any) {
-                console.error(`Failed to send schedule ${schedule.id}:`, err);
+                const errDetail = {
+                    message: err.message,
+                    statusCode: err.statusCode || err.code,
+                    details: err.details || err.originalError?.details,
+                };
+                console.error(`Failed to send schedule ${schedule.id}:`, errDetail);
 
-                // 失敗仍記錄，但可考慮重試邏輯
                 await addHistory({
                     id: schedule.id,
                     group: schedule.group,
@@ -94,11 +100,9 @@ export async function GET() {
                     sentAt: new Date().toISOString(),
                 });
 
-                results.push({ id: schedule.id, status: "failed", error: err.message });
+                results.push({ id: schedule.id, status: "failed", error: errDetail });
             }
         }
-
-        const allPending = schedules.filter((s: any) => s.status === "pending");
 
         return new NextResponse(JSON.stringify({
             serverTime: now.toISOString(),
