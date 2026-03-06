@@ -89,10 +89,12 @@ export async function GET() {
         return new NextResponse(JSON.stringify({
             serverTime: now.toISOString(),
             serverTimeLocal: now.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' }),
+            spreadsheetId: process.env.GOOGLE_SHEETS_ID,
             totalFound: schedules.length,
             processedCount: dueSchedules.length,
             debugSchedules: schedules.slice(0, 10).map((s: any) => ({
                 id: s.id,
+                group: s.group,
                 time: s.scheduledAt,
                 status: s.status,
                 isDue: dueSchedules.some(d => d.id === s.id)
@@ -102,7 +104,7 @@ export async function GET() {
             status: 200,
             headers: {
                 'Cache-Control': 'no-store, max-age=0, must-revalidate',
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json; charset=utf-8',
             },
         });
     } catch (error: any) {
