@@ -6,7 +6,12 @@ import { ThemeProvider } from "@/context/ThemeContext";
 export const metadata: Metadata = {
     title: "LINE 訊息排程器",
     description: "LINE Business 訊息自動排程發送管理系統",
-    viewport: "width=device-width, initial-scale=1, maximum-scale=1",
+};
+
+export const viewport = {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
 };
 
 export default function RootLayout({
