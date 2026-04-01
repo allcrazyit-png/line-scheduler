@@ -273,7 +273,7 @@ export default function DashboardPage() {
                         </div>
 
                         {/* Date Time Picker */}
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
                                     發送日期
