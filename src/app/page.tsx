@@ -24,6 +24,8 @@ interface QueueItem {
     message: string;
     scheduledAt: string;
     status: "pending" | "sent";
+    repeatType?: "none" | "weekly" | "monthly";
+    repeatValue?: string;
 }
 
 const TEMPLATES = [
@@ -38,6 +40,8 @@ export default function DashboardPage() {
     const [message, setMessage] = useState("");
     const [scheduledDate, setScheduledDate] = useState("");
     const [scheduledTime, setScheduledTime] = useState("");
+    const [repeatType, setRepeatType] = useState<"none" | "weekly" | "monthly">("none");
+    const [repeatValue, setRepeatValue] = useState("");
     const [queue, setQueue] = useState<QueueItem[]>([]);
     const [groups, setGroups] = useState<{ name: string; id: string }[]>([]);
     const [loading, setLoading] = useState(true);
@@ -85,6 +89,10 @@ export default function DashboardPage() {
         if (!scheduledDate) return alert("請選擇發送日期！");
         if (!scheduledTime) return alert("請選擇發送時間！");
 
+        if (repeatType !== "none" && !repeatValue) {
+            return alert(repeatType === "weekly" ? "請選擇每週重複的天數！" : "請選擇每月重複的日期！");
+        }
+
         setLoading(true);
         try {
             const res = await fetch("/api/schedule", {
@@ -94,6 +102,8 @@ export default function DashboardPage() {
                     group: selectedGroup,
                     message,
                     scheduledAt: `${scheduledDate} ${scheduledTime}`,
+                    repeatType,
+                    repeatValue,
                 }),
             });
 
@@ -104,6 +114,8 @@ export default function DashboardPage() {
                 setSelectedGroup("");
                 setScheduledDate("");
                 setScheduledTime("");
+                setRepeatType("none");
+                setRepeatValue("");
                 setShowSuccess(true);
                 setTimeout(() => setShowSuccess(false), 3000);
             }
@@ -306,6 +318,79 @@ export default function DashboardPage() {
                             </div>
                         </div>
 
+                        {/* 重複發送設定 */}
+                        <div className="space-y-3 pt-1 border-t border-gray-100 dark:border-gray-800">
+                            <div className="flex items-center justify-between">
+                                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                                    重複發送
+                                </label>
+                                <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+                                    {[
+                                        { id: "none", label: "單次" },
+                                        { id: "weekly", label: "每週" },
+                                        { id: "monthly", label: "每月" }
+                                    ].map((type) => (
+                                        <button
+                                            key={type.id}
+                                            onClick={() => setRepeatType(type.id as any)}
+                                            className={`px-3 py-1 text-[10px] sm:text-xs font-medium rounded-md transition-all ${
+                                                repeatType === type.id
+                                                    ? "bg-white dark:bg-gray-700 text-[#06C755] shadow-sm"
+                                                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700"
+                                            }`}
+                                        >
+                                            {type.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* 每週特殊選擇 */}
+                            {repeatType === "weekly" && (
+                                <div className="flex flex-wrap gap-1.5 justify-between">
+                                    {[
+                                        { v: "1", l: "一" }, { v: "2", l: "二" }, { v: "3", l: "三" },
+                                        { v: "4", l: "四" }, { v: "5", l: "五" }, { v: "6", l: "六" }, { v: "0", l: "日" }
+                                    ].map((day) => (
+                                        <button
+                                            key={day.v}
+                                            onClick={() => {
+                                                const current = repeatValue.split(",").filter(Boolean);
+                                                const next = current.includes(day.v)
+                                                    ? current.filter(d => d !== day.v)
+                                                    : [...current, day.v];
+                                                setRepeatValue(next.sort().join(","));
+                                            }}
+                                            className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs font-medium transition-all border ${
+                                                repeatValue.split(",").includes(day.v)
+                                                    ? "bg-[#06C755] border-[#06C755] text-white"
+                                                    : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+                                            }`}
+                                        >
+                                            {day.l}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* 每月特殊選擇 */}
+                            {repeatType === "monthly" && (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-500">每月第</span>
+                                    <select
+                                        value={repeatValue}
+                                        onChange={(e) => setRepeatValue(e.target.value)}
+                                        className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md px-2 py-1 text-xs outline-none text-[#06C755]"
+                                    >
+                                        {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                                            <option key={d} value={d.toString()}>{d}</option>
+                                        ))}
+                                    </select>
+                                    <span className="text-xs text-gray-500">號發送</span>
+                                </div>
+                            )}
+                        </div>
+
                         {/* Submit Button */}
                         <button
                             onClick={handleSchedule}
@@ -361,9 +446,16 @@ export default function DashboardPage() {
                                                     <span className="badge-pending">待處理</span>
                                                 </div>
                                                 <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-2">{item.message}</p>
-                                                <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
-                                                    <Clock size={11} />
-                                                    <span>{item.scheduledAt}</span>
+                                                <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
+                                                    <div className="flex items-center gap-1">
+                                                        <Clock size={11} />
+                                                        <span>{item.scheduledAt}</span>
+                                                    </div>
+                                                    {item.repeatType && item.repeatType !== "none" && (
+                                                        <span className="text-[10px] bg-[#06C755]/10 text-[#06C755] px-1.5 py-0.5 rounded border border-[#06C755]/20 font-medium">
+                                                            {item.repeatType === "weekly" ? "每週重複" : "每月重複"}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>

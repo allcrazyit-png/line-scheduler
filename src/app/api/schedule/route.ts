@@ -14,7 +14,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { group, message, scheduledAt } = body;
+        const { group, message, scheduledAt, repeatType, repeatValue } = body;
 
         if (!group || !message || !scheduledAt) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -27,6 +27,8 @@ export async function POST(request: Request) {
             scheduledAt,
             status: "pending",
             createdAt: new Date().toISOString(),
+            repeatType: repeatType || "none",
+            repeatValue: repeatValue || "",
         };
 
         await addSchedule(newItem);

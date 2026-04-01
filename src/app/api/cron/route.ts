@@ -1,9 +1,43 @@
 import { NextResponse } from "next/server";
-import { getSchedules, updateScheduleStatus, addHistory, getGroups } from "@/lib/googleSheets";
+import { getSchedules, updateScheduleStatus, updateScheduleDateTime, addHistory, getGroups } from "@/lib/googleSheets";
 import { sendLineMessage } from "@/lib/line";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+function calculateNextDate(currentDateStr: string, repeatType: string, repeatValue: string): string {
+    const current = new Date(currentDateStr);
+    if (isNaN(current.getTime())) return currentDateStr;
+
+    const next = new Date(current);
+
+    if (repeatType === "weekly") {
+        const days = repeatValue.split(",").map(Number).sort((a, b) => a - b);
+        const currentDay = next.getDay(); // 0 is Sunday
+        let found = false;
+        for (const d of days) {
+            if (d > currentDay) {
+                next.setDate(next.getDate() + (d - currentDay));
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            const firstDay = days[0];
+            next.setDate(next.getDate() + (7 - currentDay + firstDay));
+        }
+    } else if (repeatType === "monthly") {
+        const targetDay = parseInt(repeatValue);
+        next.setMonth(next.getMonth() + 1);
+        next.setDate(targetDay);
+        // 處理月份天數不足的情況
+        if (next.getDate() !== targetDay) {
+            next.setDate(0);
+        }
+    }
+
+    return next.toISOString().split(".")[0];
+}
 
 export async function GET() {
     try {
@@ -22,55 +56,37 @@ export async function GET() {
 
         // 找出所有狀態為 pending 且時間已到的預約
         const dueSchedules = schedules.filter((s: any) => {
-            // 智慧偵測：哪一格長得像時間，就用哪一格
-            const isDate = (str: string) => str && (str.includes("-") || str.includes("/"));
+            if (s.status !== "pending") return false;
 
-            let dateStrCandidate = "";
-            let statusCandidate = "";
+            const datePart = s.scheduledAt.replace(" ", "T").replace(/\//g, "-");
+            const finalDateStr = datePart.includes("+") || datePart.includes("Z")
+                ? datePart
+                : (datePart.split(":").length === 2 ? datePart + ":00" : datePart) + "+08:00";
 
-            if (isDate(s.scheduledAt)) {
-                dateStrCandidate = s.scheduledAt;
-                statusCandidate = s.status;
-            } else if (isDate(s.status)) {
-                dateStrCandidate = s.status;
-                statusCandidate = s.scheduledAt;
-            } else {
-                return false;
-            }
+            const scheduledDate = new Date(finalDateStr);
+            if (isNaN(scheduledDate.getTime())) return false;
 
-            if (!statusCandidate || !dateStrCandidate) return false;
-
-            const normalizedStatus = statusCandidate.trim().toLowerCase();
-            if (normalizedStatus !== "pending") return false;
-
-            // 處理時間格式，加入容錯
-            try {
-                const datePart = dateStrCandidate.replace(" ", "T").replace(/\//g, "-");
-                const finalDateStr = datePart.includes("+") || datePart.includes("Z")
-                    ? datePart
-                    : (datePart.split(":").length === 2 ? datePart + ":00" : datePart) + "+08:00";
-
-                const scheduledDate = new Date(finalDateStr);
-                if (isNaN(scheduledDate.getTime())) return false;
-
-                return scheduledDate <= now;
-            } catch (e) {
-                return false;
-            }
+            return scheduledDate <= now;
         });
 
         for (const schedule of dueSchedules) {
             try {
                 const lineId = groupMap[schedule.group] || schedule.group;
-
-                // 記錄發送嘗試
                 console.log(`Sending to lineId: [${lineId}], group: [${schedule.group}]`);
 
                 // 1. 發送 LINE
                 await sendLineMessage(lineId, schedule.message);
 
-                // 2. 更新狀態為 sent
-                await updateScheduleStatus(schedule.id, "sent");
+                // 2. 判斷是否為週期性訊息
+                if (schedule.repeatType && schedule.repeatType !== "none") {
+                    // 計算下一次發送日期
+                    const nextDate = calculateNextDate(schedule.scheduledAt, schedule.repeatType, schedule.repeatValue);
+                    await updateScheduleDateTime(schedule.id, nextDate);
+                    console.log(`Recurring schedule ${schedule.id} updated to ${nextDate}`);
+                } else {
+                    // 單次訊息：更新狀態為 sent
+                    await updateScheduleStatus(schedule.id, "sent");
+                }
 
                 // 3. 寫入歷史紀錄
                 await addHistory({
@@ -82,18 +98,10 @@ export async function GET() {
                     sentAt: new Date().toISOString(),
                 });
 
-                results.push({ id: schedule.id, status: "success", lineId });
+                results.push({ id: schedule.id, status: "success", type: schedule.repeatType });
             } catch (err: any) {
-                const errDetail = {
-                    message: err.message,
-                    statusCode: err.statusCode || err.code,
-                    details: err.details || err.originalError?.details,
-                };
-                console.error(`Failed to send schedule ${schedule.id}:`, errDetail);
-
-                // 關鍵修復：發送失敗也要更新狀態，防止下次再次重試造成 429 率限
+                console.error(`Failed to send schedule ${schedule.id}:`, err.message);
                 await updateScheduleStatus(schedule.id, "failed");
-
                 await addHistory({
                     id: schedule.id,
                     group: schedule.group,
@@ -102,25 +110,14 @@ export async function GET() {
                     scheduledAt: schedule.scheduledAt,
                     sentAt: new Date().toISOString(),
                 });
-
-                results.push({ id: schedule.id, status: "failed", error: errDetail });
+                results.push({ id: schedule.id, status: "failed", error: err.message });
             }
-
         }
 
         return new NextResponse(JSON.stringify({
             serverTime: now.toISOString(),
-            serverTimeLocal: now.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' }),
-            spreadsheetId: process.env.GOOGLE_SHEETS_ID,
             totalFound: schedules.length,
             processedCount: dueSchedules.length,
-            debugSchedules: schedules.slice(0, 10).map((s: any) => ({
-                id: s.id,
-                group: s.group,
-                time: s.scheduledAt,
-                status: s.status,
-                isDue: dueSchedules.some(d => d.id === s.id)
-            })),
             results,
         }), {
             status: 200,

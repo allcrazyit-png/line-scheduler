@@ -30,7 +30,7 @@ export async function getSheets() {
 
 export async function getSchedules() {
     const sheets = await getSheets();
-    const range = "line_schedules!A2:F";
+    const range = "line_schedules!A2:H";
     const response = await sheets.spreadsheets.values.get({
         spreadsheetId: process.env.GOOGLE_SHEETS_ID,
         range,
@@ -44,6 +44,8 @@ export async function getSchedules() {
         scheduledAt: row[3],
         status: row[4],
         createdAt: row[5],
+        repeatType: row[6] || "none",
+        repeatValue: row[7] || "",
     }));
 }
 
@@ -54,11 +56,22 @@ export async function addSchedule(data: {
     scheduledAt: string;
     status: string;
     createdAt: string;
+    repeatType?: string;
+    repeatValue?: string;
 }) {
     const sheets = await getSheets();
-    const range = "line_schedules!A:F";
+    const range = "line_schedules!A:H";
     const values = [
-        [data.id, data.group, data.message, data.scheduledAt, data.status, data.createdAt],
+        [
+            data.id,
+            data.group,
+            data.message,
+            data.scheduledAt,
+            data.status,
+            data.createdAt,
+            data.repeatType || "none",
+            data.repeatValue || "",
+        ],
     ];
 
     await sheets.spreadsheets.values.append({
@@ -145,6 +158,27 @@ export async function addHistory(data: {
         range,
         valueInputOption: "RAW",
         requestBody: { values },
+    });
+}
+
+export async function updateScheduleDateTime(id: string, scheduledAt: string) {
+    const sheets = await getSheets();
+    const schedules = await getSchedules();
+    const rowIndex = schedules.findIndex((s) => s.id === id);
+
+    if (rowIndex === -1) return;
+
+    // rowIndex + 2 because of header (A1)
+    const rowPos = rowIndex + 2;
+    const range = `line_schedules!D${rowPos}`;
+
+    await sheets.spreadsheets.values.update({
+        spreadsheetId: process.env.GOOGLE_SHEETS_ID,
+        range,
+        valueInputOption: "RAW",
+        requestBody: {
+            values: [[scheduledAt]],
+        },
     });
 }
 
