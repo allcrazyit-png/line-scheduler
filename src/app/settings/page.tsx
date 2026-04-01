@@ -231,7 +231,7 @@ export default function SettingsPage() {
 
                 {/* App Version */}
                 <div className="text-center pb-2">
-                    <p className="text-xs text-gray-300 dark:text-gray-700 font-medium">LINE 訊息排程器 v1.0.0</p>
+                    <p className="text-xs text-gray-300 dark:text-gray-700 font-medium">LINE 訊息排程器 v1.0.1</p>
                     <p className="text-xs text-gray-300 dark:text-gray-700">© 2026 Built with Next.js & LINE API</p>
                 </div>
             </div>
