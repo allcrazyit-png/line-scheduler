@@ -275,18 +275,18 @@ export default function DashboardPage() {
                         </div>
 
                         {/* Date Time Picker */}
-                        <div className="grid grid-cols-2 gap-2.5">
+                        <div className="grid grid-cols-2 gap-2">
                             <div>
                                 <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
                                     發送日期
                                 </label>
                                 <div className="relative">
-                                    <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                    <Calendar className="hidden sm:block absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                                     <input
                                         type="date"
                                         value={scheduledDate}
                                         onChange={(e) => setScheduledDate(e.target.value)}
-                                        className="input-field pl-8 sm:pl-9 text-xs sm:text-sm"
+                                        className="input-field px-3 sm:pl-9 py-3 text-xs sm:text-sm"
                                     />
                                 </div>
                             </div>
@@ -295,12 +295,12 @@ export default function DashboardPage() {
                                     發送時間
                                 </label>
                                 <div className="relative">
-                                    <Clock className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                    <Clock className="hidden sm:block absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                                     <input
                                         type="time"
                                         value={scheduledTime}
                                         onChange={(e) => setScheduledTime(e.target.value)}
-                                        className="input-field pl-8 sm:pl-9 text-xs sm:text-sm"
+                                        className="input-field px-3 sm:pl-9 py-3 text-xs sm:text-sm"
                                     />
                                 </div>
                             </div>
