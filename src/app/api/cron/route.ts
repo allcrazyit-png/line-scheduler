@@ -74,6 +74,9 @@ export async function GET() {
                 const lineId = groupMap[schedule.group] || schedule.group;
                 console.log(`Sending to lineId: [${lineId}], group: [${schedule.group}]`);
 
+                // 0. 先標記為 processing，防止下一分鐘重複發送
+                await updateScheduleStatus(schedule.id, "processing");
+
                 // 1. 發送 LINE
                 await sendLineMessage(lineId, schedule.message);
 
