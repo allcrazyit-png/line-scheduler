@@ -82,9 +82,10 @@ export async function GET() {
 
                 // 2. 判斷是否為週期性訊息
                 if (schedule.repeatType && schedule.repeatType !== "none") {
-                    // 計算下一次發送日期
+                    // 計算下一次發送日期，並把狀態改回 pending 等待下次觸發
                     const nextDate = calculateNextDate(schedule.scheduledAt, schedule.repeatType, schedule.repeatValue);
                     await updateScheduleDateTime(schedule.id, nextDate);
+                    await updateScheduleStatus(schedule.id, "pending");
                     console.log(`Recurring schedule ${schedule.id} updated to ${nextDate}`);
                 } else {
                     // 單次訊息：更新狀態為 sent
