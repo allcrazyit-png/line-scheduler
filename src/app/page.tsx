@@ -191,7 +191,7 @@ export default function DashboardPage() {
                         </div>
                         <div>
                             <p className="text-xs text-gray-400 dark:text-gray-500 font-medium leading-none mb-0.5">LINE Business</p>
-                            <h1 className="text-base font-bold text-gray-900 dark:text-white leading-none">訊息排程器 <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500 ml-1">v1.0.1</span></h1>
+                            <h1 className="text-base font-bold text-gray-900 dark:text-white leading-none">訊息排程器 <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500 ml-1">v1.1.0</span></h1>
                         </div>
                     </div>
                     {/* Status Badge */}
